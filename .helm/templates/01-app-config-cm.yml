@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}-config
+data:
+  config.yml: |
+    storage:
+      host: localhost
+      port: "7687"
+      user: neo4j
+      name: "neo4j"
+      password: "12345678"
+
+    updater:
+      port: "4444"
+
+    sources:
+      yaml:
+        parse_config_path: example/parse_conf.yaml
+        from_gitlab: true
+        weight: 1
+      gitlab:
+        client:
+          token: <your_token>
+          base_url: <your_url>
+          use_archived: false
+          # per_page: 0
+          # timeout: 0
+          # rate_limit: 0
+          # api_prefix: ""
+        weight: 0
+      migration:
+        weight: 2
+
+    collector:
+      parallel_jobs: 1
+      migration_paths:
+        - ./migrations
+      service_config_paths:
+        - .helm/values.yaml
+        - .helm/values.yml
+      gitlab:
+        client:
+          token: <your_token>
+          base_url: <your_url>
+          use_archived: false
+          # per_page: 0
+          # timeout: 0
+          # rate_limit: 0
+          # api_prefix: ""
+        groups:
+          - <your_group>
+        release_project:
+          project: <your_project>
+          release_file_path: release.yaml
+          tag: <your_tag>
+          parse_config_path: example/parse_conf2.yaml
+
+

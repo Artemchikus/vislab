@@ -1,0 +1,56 @@
+app:
+  listen:
+    port:
+      _default: {{ .service.port.number | weight 0 }}
+
+services:
+  "*":
+    address:
+      _default: {{ parse http://.other_service.name:.other_service.port.number/$ | weight 0 }}
+
+kafka:
+  brokers:
+    - name: {{ .kafka.name | weight 0 }}
+      hosts:
+        - {{ parse .kafka.host:.kafka.port | weight 0 }}
+  consumers:
+    - name: {{ .kafka.queue.name | .kafka.queue.type = consumer }}
+      topic: {{ .kafka.queue.topic }}
+      type_name: {{ .kafka.queue.type_name }}
+  producers:
+    - name: {{ .kafka.queue.name | .kafka.queue.type = producer }}
+      topic: {{ .kafka.queue.topic }}
+      type_name: {{ .kafka.queue.type_name }}
+
+rabbitmq:
+  port:
+    _default: {{ .rabbitmq.port | weight 0 }}
+  user:
+    _default: {{ .rabbitmq.user | weight 0 }}
+  host:
+    _default: {{ .rabbitmq.host | weight 0 }}
+
+redis:
+  master:
+    _default: {{ .redis.master | weight 0 }}
+  namespace:
+    _default: {{ .redis.database.namespace.name | weight 0 }}
+  url:
+    _default: {{ parse redis://.redis.host:$ | weight 0 }}
+  port:
+    _default: {{ .redis.port | weight 0 }}
+  db:
+    _default: {{ .redis.database.name | weight 0 }}
+
+postgresql:
+  "*":
+    host:
+      _default: {{ .postgresql.host | weight 0 }}
+    port:
+      _default: {{ .postgresql.port | weight 0 }}
+    user:
+       _default: {{ .postgresql.user | weight 0 }}
+    db:
+      _default: {{ .postgresql.database.name | weight 0 }}
+    search_path:
+      _default: {{ .postgresql.database.scheme.name | weight 0 }}

@@ -1,0 +1,24 @@
+app:
+  port: 5050
+  url_prefix: /api
+  domain:
+    _default: <your_domain>
+  replicas: 1
+
+neo4j:
+  storage:
+    size: 10Gi
+    class: ceph-csi-rbd
+  api:
+    port: 7687
+  ui:
+    port: 7474
+    url_prefix: /browser
+
+resources:
+  requests:
+    cpu: 1
+    memory: 2Gi
+  limits:
+    cpu: 2
+    memory: 4Gi

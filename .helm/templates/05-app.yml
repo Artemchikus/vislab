@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Chart.Name }}
+spec:
+  serviceName: {{ .Chart.Name }}-service
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  replicas: {{ .Values.app.replicas }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+      annotations:
+        checksum/config-api: {{ include (print $.Template.BasePath "/01-app-config-cm.yml") . | sha256sum }}
+        checksum/config-ui: {{ include (print $.Template.BasePath "/02-neo4j-config-cm.yml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/03-app-secret.yml") . | sha256sum }}
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: neo4j
+          image: <neo4j_image>
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ .Values.neo4j.api.port }}
+            - containerPort: {{ .Values.neo4j.ui.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Chart.Name }}-neo4j-config-map
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+        - name: app
+          image: <app_image>
+          imagePullPolicy: IfNotPresent
+          args: ["/app/bin/app", "-conf=/app/example/config.yaml"]
+          ports:
+            - containerPort: {{ .Values.app.port }}
+          envFrom:
+            - secretRef:
+                name: {{ .Chart.Name }}-secret
+          volumeMounts:
+            - name: app-config
+              mountPath: /app/example/config.yml
+              subPath: config.yml
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+      volumes:
+        - name: app-config
+          configMap:
+            name: {{ .Chart.Name }}-config
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.neo4j.storage.size }}
+      storageClassName: {{ .Values.neo4j.storage.class }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}-service
+spec:
+  type: ClusterIP
+  ports:
+    - name: app
+      port: {{ .Values.app.port }}
+    - name: neo4j-api
+      port: {{ .Values.neo4j.api.port }}
+    - name: neo4j-ui
+      port: {{ .Values.neo4j.ui.port }}
+  selector:
+    app: {{ .Chart.Name }}

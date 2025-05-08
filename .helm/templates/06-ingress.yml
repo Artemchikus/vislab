@@ -1,0 +1,52 @@
+{{- $host := printf "%s.%s" .Chart.Name ( pluck .Values.global.cluster .Values.app.domain | first | default .Values.app.domain._default)  }}
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Chart.Name }}-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 500m
+    kubernetes.io/ingress.class: nginx
+spec:
+  tls:
+    - secretName: {{ .Chart.Name }}-tls-secret
+      hosts:
+        - {{ $host }}
+  rules:
+    - host: {{ $host }}
+      http:
+        paths:
+          - path: {{ .Values.app.url_prefix }}/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ .Chart.Name }}-service
+                port:
+                  number: {{ .Values.app.port }}
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ .Chart.Name }}-service
+                port:
+                  number: {{ .Values.neo4j.api.port }}
+          - path: {{ .Values.neo4j.ui.url_prefix }}
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ .Chart.Name }}-service
+                port:
+                  number: {{ .Values.neo4j.ui.port }}
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Chart.Name }}-tls-secret
+spec:
+  secretName: {{ .Chart.Name }}-tls-secret
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt
+  dnsNames:
+  - {{ $host }}
